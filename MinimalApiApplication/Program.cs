@@ -1,8 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using MinimalApiApplication.Data;
 using MinimalApiApplication.Middleware;
-using MinimalApiApplication.Models;
-using MinimalApiApplication.Dtos;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(
@@ -10,6 +8,7 @@ builder.Services.AddDbContext<AppDbContext>(
     );
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
+builder.Services.AddControllers();
 var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
@@ -19,48 +18,50 @@ using (var scope = app.Services.CreateScope())
 app.UseStatusCodePages();
 app.UseExceptionHandler();
 app.UseMiddleware<IPBlockingMiddleware>();
-var items=app.MapGroup("/items");
 
-items.MapGet("/", async (AppDbContext db) =>
-    Results.Ok(new ApiResponse<List<Item>>(await db.Items.ToListAsync())));
+//var items=app.MapGroup("/items");
 
-items.MapGet("/{id:int}", async (AppDbContext db, int id) =>
-    await db.Items.FirstOrDefaultAsync(i => i.Id == id) is Item item
-    ? Results.Ok(new ApiResponse<Item>(item)) 
-    : Results.NotFound(new ApiResponse<string>("Item not found"))
-);
+//items.MapGet("/", async (AppDbContext db) =>
+//    Results.Ok(new ApiResponse<List<Item>>(await db.Items.ToListAsync())));
 
-items.MapGet("/search",async (AppDbContext db,string? name) =>
-{
-    if(string.IsNullOrEmpty(name)) 
-        return Results.BadRequest(new ApiResponse<string>("Name parameter is required"));
-    var filterItems=await db.Items
-        .Where(i => i.Name.ToLower().Contains(name.ToLower()))
-        .ToListAsync();
-    return Results.Ok(new ApiResponse<List<Item>>(filterItems));
-});
-items.MapPost("/", async (AppDbContext db, Item? item) => {
-   
-    if(item is null || string.IsNullOrEmpty(item.Name) || item.Price <= 0)
-    {
-        return Results.BadRequest(new ApiResponse<string>("Invalid item data"));
-    }
+//items.MapGet("/{id:int}", async (AppDbContext db, int id) =>
+//    await db.Items.FirstOrDefaultAsync(i => i.Id == id) is Item item
+//    ? Results.Ok(new ApiResponse<Item>(item)) 
+//    : Results.NotFound(new ApiResponse<string>("Item not found"))
+//);
 
-    db.Items.Add(item);
-    await db.SaveChangesAsync();
-    return Results.Created($"/items/{item.Id}", new ApiResponse<Item>(item));
-});
-items.MapPost("/bulk", async (AppDbContext db, List<Item>? items) => {
+//items.MapGet("/search",async (AppDbContext db,string? name) =>
+//{
+//    if(string.IsNullOrEmpty(name)) 
+//        return Results.BadRequest(new ApiResponse<string>("Name parameter is required"));
+//    var filterItems=await db.Items
+//        .Where(i => i.Name.ToLower().Contains(name.ToLower()))
+//        .ToListAsync();
+//    return Results.Ok(new ApiResponse<List<Item>>(filterItems));
+//});
+//items.MapPost("/", async (AppDbContext db, Item? item) => {
 
-    if (items is null || items.Any(i => string.IsNullOrEmpty(i.Name) || i.Price <= 0))
-    {
-        return Results.BadRequest(new ApiResponse<string>("Invalid item data"));
-    }
+//    if(item is null || string.IsNullOrEmpty(item.Name) || item.Price <= 0)
+//    {
+//        return Results.BadRequest(new ApiResponse<string>("Invalid item data"));
+//    }
 
-    db.Items.AddRange(items);
-    await db.SaveChangesAsync();
-    return Results.Ok(new ApiResponse<List<Item>>(items));
-});
+//    db.Items.Add(item);
+//    await db.SaveChangesAsync();
+//    return Results.Created($"/items/{item.Id}", new ApiResponse<Item>(item));
+//});
+//items.MapPost("/bulk", async (AppDbContext db, List<Item>? items) => {
 
-app.MapGet("/error", async (context) => throw (new Exception("Error Occur")));
+//    if (items is null || items.Any(i => string.IsNullOrEmpty(i.Name) || i.Price <= 0))
+//    {
+//        return Results.BadRequest(new ApiResponse<string>("Invalid item data"));
+//    }
+
+//    db.Items.AddRange(items);
+//    await db.SaveChangesAsync();
+//    return Results.Ok(new ApiResponse<List<Item>>(items));
+//});
+
+//app.MapGet("/error", async (context) => throw (new Exception("Error Occur")));
+app.MapControllers();
 app.Run();
